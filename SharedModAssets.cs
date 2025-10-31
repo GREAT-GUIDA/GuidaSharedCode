@@ -26,7 +26,7 @@ namespace GuidaSharedCode {
         public SoundAssetAttribute(string path) : base(path) { }
     }
 
-    /*public class SharedModAssets : ModSystem {
+    public class SharedModAssets : ModSystem {
         public static string AssetDir = $".../GuidaSharedCode";
         public static string EmptyTextureDir = $".../GuidaSharedCode/Texture/Empty";
         // 着色器
@@ -51,17 +51,8 @@ namespace GuidaSharedCode {
         [Asset("Shader/TwistImage")]
         public static Effect TwistImageShader;
 
-        // 纹理 - 可以使用更简洁的声明
         [Asset("Texture/TwistCircle")] public static Texture2D twistCircleTexture;
-        // 音效
-        [SoundAsset("GraveyardOpen", Volume = 0.22f)]
-        public static SoundStyle sndGraveyardOpen;
 
-        [SoundAsset("SharkFistKill", Volume = 0.2f, PitchVariance = 0.5f, MaxInstances = 1)]
-        public static SoundStyle sndSharkFistKill;
-
-        [SoundAsset("SharkPunch", Volume = 1f, PitchVariance = 0.7f, MaxInstances = 5)]
-        public static SoundStyle sndSharkPunch;
         public override void Load() {
             EmptyTextureDir = $"{Mod.Name}/GuidaSharedCode/Empty";
             AssetDir = $"{Mod.Name}/GuidaSharedCode";
@@ -74,7 +65,6 @@ namespace GuidaSharedCode {
             var fields = type.GetFields(BindingFlags.Public | BindingFlags.Static);
 
             foreach (var field in fields) {
-                // 处理普通资源
                 var assetAttr = field.GetCustomAttribute<AssetAttribute>();
                 if (assetAttr != null && !(assetAttr is SoundAssetAttribute)) {
                     var fullPath = $"{AssetDir}/{assetAttr.Path}";
@@ -86,7 +76,6 @@ namespace GuidaSharedCode {
                     }
                 }
 
-                // 处理音效资源
                 var soundAttr = field.GetCustomAttribute<SoundAssetAttribute>();
                 if (soundAttr != null) {
                     var fullPath = $"{AssetDir}/Sound/{soundAttr.Path}";
@@ -103,5 +92,5 @@ namespace GuidaSharedCode {
         private static T LoadAsset<T>(string path) where T : class {
             return ModContent.Request<T>(path, AssetRequestMode.ImmediateLoad).Value;
         }
-    }*/
+    }
 }

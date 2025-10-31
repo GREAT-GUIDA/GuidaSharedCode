@@ -1,4 +1,4 @@
-﻿/*using Microsoft.Xna.Framework.Graphics;
+﻿using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,10 +10,12 @@ using Terraria.ModLoader;
 using Microsoft.Xna.Framework;
 using System.Reflection;
 using Terraria.Graphics.Effects;
-using GuidaSharedCode;
 using Terraria.Graphics.Capture;
+using GuidaSharedCode;
+using TombwardJourney.Content.Particles;
+using TombwardJourney;
 
-namespace GuidaSharedCode {
+namespace TombwardJourney {
     class ScreenTwistSystem : ModSystem{
         public static RenderTarget2D twistTarget;
         public static RenderTarget2D twistTarget2;
@@ -39,7 +41,8 @@ namespace GuidaSharedCode {
         }
 
         private void On_Main_InitTargets_int_int(On_Main.orig_InitTargets_int_int orig, Main self, int width, int height) {
-            throw new NotImplementedException();
+            orig.Invoke(self, width, height);
+            RecreateRenderTargets(Vector2.Zero);
         }
         public delegate void orig_EndCapture(object self, RenderTarget2D finalTexture, RenderTarget2D screenTarget1, RenderTarget2D screenTarget2, Color clearColor);
         private void On_Main_EndCapture(orig_EndCapture orig, FilterManager self, RenderTarget2D finalTexture,
@@ -105,14 +108,14 @@ namespace GuidaSharedCode {
             };
 
             spriteBatch.Begin(SpriteSortMode.Deferred, blendState, SamplerState.LinearClamp,
-                DepthStencilState.None, RasterizerState.CullNone, SharedModAssets.TwistImageShader,
+                DepthStencilState.None, RasterizerState.CullNone, ModAssets.TwistImageShader,
                 Main.GameViewMatrix.TransformationMatrix);
 
-            SharedModAssets.TwistImageShader.CurrentTechnique.Passes["P0"].Apply();
+            ModAssets.TwistImageShader.CurrentTechnique.Passes["P0"].Apply();
 
             if (ParticleManager.Instance.particlesByLayer.TryGetValue(ParticleLayer.Twist, out List<Particle> particles)) {
                 foreach (var particle in particles) {
-                    var texture = SharedModAssets.twistCircleTexture;
+                    var texture = ModAssets.TwistCircleTexture;
                     var twistCircle = particle as TwistCircleParticle;
                     float size = twistCircle.image_scale;
                     float opacity = twistCircle.image_alpha * 0.5f;
@@ -126,19 +129,19 @@ namespace GuidaSharedCode {
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied,
                 SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone,
-                SharedModAssets.PostScreenEffects, Matrix.Identity);
+                ModAssets.PostScreenEffects, Matrix.Identity);
 
             Vector2 screenSize = new Vector2(
                 device.PresentationParameters.BackBufferWidth,
                 device.PresentationParameters.BackBufferHeight);
 
-            SharedModAssets.PostScreenEffects.Parameters["uImageSize1"].SetValue(screenSize);
-            SharedModAssets.PostScreenEffects.Parameters["uBloomIntensity"].SetValue(UBloomIntensity);
-            SharedModAssets.PostScreenEffects.Parameters["uLerpIntensity"].SetValue(ULerpIntensity);
-            SharedModAssets.PostScreenEffects.Parameters["uLerpColor"].SetValue(ULerpColor.ToVector3());
-            SharedModAssets.PostScreenEffects.Parameters["uRadialBlurIntensity"].SetValue(URadialBlurIntensity);
-            SharedModAssets.PostScreenEffects.Parameters["uRadialBlurPosition"].SetValue(URadialBlurPosition);
-            SharedModAssets.PostScreenEffects.CurrentTechnique.Passes["P0"].Apply();
+            ModAssets.PostScreenEffects.Parameters["uImageSize1"].SetValue(screenSize);
+            ModAssets.PostScreenEffects.Parameters["uBloomIntensity"].SetValue(UBloomIntensity);
+            ModAssets.PostScreenEffects.Parameters["uLerpIntensity"].SetValue(ULerpIntensity);
+            ModAssets.PostScreenEffects.Parameters["uLerpColor"].SetValue(ULerpColor.ToVector3());
+            ModAssets.PostScreenEffects.Parameters["uRadialBlurIntensity"].SetValue(URadialBlurIntensity);
+            ModAssets.PostScreenEffects.Parameters["uRadialBlurPosition"].SetValue(URadialBlurPosition);
+            ModAssets.PostScreenEffects.CurrentTechnique.Passes["P0"].Apply();
 
             device.SetRenderTargets(twistTarget2);
             spriteBatch.Draw(Main.screenTarget, Vector2.Zero, Color.White);
@@ -148,15 +151,14 @@ namespace GuidaSharedCode {
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied,
                 SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone,
-                SharedModAssets.TwistDoneShader, Matrix.Identity);
+                ModAssets.TwistDoneShader, Matrix.Identity);
 
-            SharedModAssets.TwistDoneShader.Parameters["uScreenResolution"].SetValue(screenSize);
-            SharedModAssets.TwistDoneShader.Parameters["uImage1"].SetValue(twistTarget2);
-            SharedModAssets.TwistDoneShader.CurrentTechnique.Passes["P0"].Apply();
+            ModAssets.TwistDoneShader.Parameters["uScreenResolution"].SetValue(screenSize);
+            ModAssets.TwistDoneShader.Parameters["uImage1"].SetValue(twistTarget2);
+            ModAssets.TwistDoneShader.CurrentTechnique.Passes["P0"].Apply();
 
             spriteBatch.Draw(twistTarget, new Rectangle(0, 0, width, height), Color.White);
             spriteBatch.End();
         }
     }
 }
-*/
