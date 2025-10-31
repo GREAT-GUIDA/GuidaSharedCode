@@ -51,7 +51,7 @@ namespace GuidaSharedCode {
         [Asset("Shader/TwistImage")]
         public static Effect TwistImageShader;
 
-        [Asset("Texture/TwistCircle")] public static Texture2D twistCircleTexture;
+        [Asset("Texture/TwistCircle")] public static Texture2D TwistCircleTexture;
 
         public override void Load() {
             EmptyTextureDir = $"{Mod.Name}/GuidaSharedCode/Empty";

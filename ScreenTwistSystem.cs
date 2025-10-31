@@ -109,14 +109,14 @@ namespace GuidaSharedCode {
             };
 
             spriteBatch.Begin(SpriteSortMode.Deferred, blendState, SamplerState.LinearClamp,
-                DepthStencilState.None, RasterizerState.CullNone, ModAssets.TwistImageShader,
+                DepthStencilState.None, RasterizerState.CullNone, SharedModAssets.TwistImageShader,
                 Main.GameViewMatrix.TransformationMatrix);
 
-            ModAssets.TwistImageShader.CurrentTechnique.Passes["P0"].Apply();
+            SharedModAssets.TwistImageShader.CurrentTechnique.Passes["P0"].Apply();
 
             if (ParticleManager.Instance.particlesByLayer.TryGetValue(ParticleLayer.Twist, out List<Particle> particles)) {
                 foreach (var particle in particles) {
-                    var texture = ModAssets.TwistCircleTexture;
+                    var texture = SharedModAssets.TwistCircleTexture;
                     var twistCircle = particle as TwistCircleParticle;
                     float size = twistCircle.image_scale;
                     float opacity = twistCircle.image_alpha * 0.5f;
@@ -130,19 +130,19 @@ namespace GuidaSharedCode {
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied,
                 SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone,
-                ModAssets.PostScreenEffects, Matrix.Identity);
+                SharedModAssets.PostScreenEffects, Matrix.Identity);
 
             Vector2 screenSize = new Vector2(
                 device.PresentationParameters.BackBufferWidth,
                 device.PresentationParameters.BackBufferHeight);
 
-            ModAssets.PostScreenEffects.Parameters["uImageSize1"].SetValue(screenSize);
-            ModAssets.PostScreenEffects.Parameters["uBloomIntensity"].SetValue(UBloomIntensity);
-            ModAssets.PostScreenEffects.Parameters["uLerpIntensity"].SetValue(ULerpIntensity);
-            ModAssets.PostScreenEffects.Parameters["uLerpColor"].SetValue(ULerpColor.ToVector3());
-            ModAssets.PostScreenEffects.Parameters["uRadialBlurIntensity"].SetValue(URadialBlurIntensity);
-            ModAssets.PostScreenEffects.Parameters["uRadialBlurPosition"].SetValue(URadialBlurPosition);
-            ModAssets.PostScreenEffects.CurrentTechnique.Passes["P0"].Apply();
+            SharedModAssets.PostScreenEffects.Parameters["uImageSize1"].SetValue(screenSize);
+            SharedModAssets.PostScreenEffects.Parameters["uBloomIntensity"].SetValue(UBloomIntensity);
+            SharedModAssets.PostScreenEffects.Parameters["uLerpIntensity"].SetValue(ULerpIntensity);
+            SharedModAssets.PostScreenEffects.Parameters["uLerpColor"].SetValue(ULerpColor.ToVector3());
+            SharedModAssets.PostScreenEffects.Parameters["uRadialBlurIntensity"].SetValue(URadialBlurIntensity);
+            SharedModAssets.PostScreenEffects.Parameters["uRadialBlurPosition"].SetValue(URadialBlurPosition);
+            SharedModAssets.PostScreenEffects.CurrentTechnique.Passes["P0"].Apply();
 
             device.SetRenderTargets(twistTarget2);
             spriteBatch.Draw(Main.screenTarget, Vector2.Zero, Color.White);
@@ -152,11 +152,11 @@ namespace GuidaSharedCode {
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied,
                 SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone,
-                ModAssets.TwistDoneShader, Matrix.Identity);
+                SharedModAssets.TwistDoneShader, Matrix.Identity);
 
-            ModAssets.TwistDoneShader.Parameters["uScreenResolution"].SetValue(screenSize);
-            ModAssets.TwistDoneShader.Parameters["uImage1"].SetValue(twistTarget2);
-            ModAssets.TwistDoneShader.CurrentTechnique.Passes["P0"].Apply();
+            SharedModAssets.TwistDoneShader.Parameters["uScreenResolution"].SetValue(screenSize);
+            SharedModAssets.TwistDoneShader.Parameters["uImage1"].SetValue(twistTarget2);
+            SharedModAssets.TwistDoneShader.CurrentTechnique.Passes["P0"].Apply();
 
             spriteBatch.Draw(twistTarget, new Rectangle(0, 0, width, height), Color.White);
             spriteBatch.End();
