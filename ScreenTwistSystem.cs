@@ -16,6 +16,9 @@ using TombwardJourney.Content.Particles;
 using TombwardJourney;
 
 namespace TombwardJourney {
+
+
+
     class ScreenTwistSystem : ModSystem{
         public static RenderTarget2D twistTarget;
         public static RenderTarget2D twistTarget2;
