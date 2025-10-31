@@ -10,7 +10,6 @@ using Terraria.Graphics.Capture;
 using GuidaSharedCode;
 using Terraria.ID;
 using TombwardJourney.Content.FlyingTombstone;
-using TombwardJourney;
 
 namespace GuidaSharedCode {
     /// <summary>

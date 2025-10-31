@@ -12,10 +12,8 @@ using System.Reflection;
 using Terraria.Graphics.Effects;
 using Terraria.Graphics.Capture;
 using GuidaSharedCode;
-using TombwardJourney.Content.Particles;
-using TombwardJourney;
 
-namespace TombwardJourney {
+namespace GuidaSharedCode {
 
 
 
