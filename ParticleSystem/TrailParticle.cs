@@ -17,7 +17,7 @@ namespace GuidaSharedCode {
         public int trailLength = 50;
         public int trailStart;
         public int trailEnd;
-        public override Texture2D Texture => customizeTexture ?? SharedModAssets.emptyTexture;
+        public override Texture2D Texture => customizeTexture ?? ModAsset.TexEmpty.Value;
         public Texture2D customizeTexture;
         public BlendState trailBlendState = BlendState.AlphaBlend;
         public float trailAfterImage = 0;
@@ -45,10 +45,10 @@ namespace GuidaSharedCode {
         public override bool PreDraw(SpriteBatch spriteBatch, Color lightColor) {
             spriteBatch.EndAndBegin(trailBlendState);
             if (trailAfterImage > 0) {
-                spriteBatch.EndAndBegin(trailBlendState, SamplerState.LinearClamp, SharedModAssets.AfterImageShader);
-                SharedModAssets.AfterImageShader.Parameters["uIntensity"].SetValue(trailAfterImage);
-                SharedModAssets.AfterImageShader.Parameters["uColor"].SetValue(Color.White.ToVector3());
-                SharedModAssets.AfterImageShader.CurrentTechnique.Passes["P0"].Apply();
+                spriteBatch.EndAndBegin(trailBlendState, SamplerState.LinearClamp, ModAsset.ShaAfterImage.Value);
+                ModAsset.ShaAfterImage.Value.Parameters["uIntensity"].SetValue(trailAfterImage);
+                ModAsset.ShaAfterImage.Value.Parameters["uColor"].SetValue(Color.White.ToVector3());
+                ModAsset.ShaAfterImage.Value.CurrentTechnique.Passes["P0"].Apply();
             }
             for (int i = trailEnd - 1; i >= trailStart; i--) {
                 if (trailPos[i] != Vector2.Zero) {
