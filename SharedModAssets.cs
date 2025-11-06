@@ -6,7 +6,6 @@ using System;
 using System.Reflection;
 using Terraria.Audio;
 using Terraria.ModLoader;
-using TombwardJourney;
 
 namespace GuidaSharedCode {
     // 自定义属性
