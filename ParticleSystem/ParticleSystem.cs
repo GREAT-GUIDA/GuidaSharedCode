@@ -42,6 +42,8 @@ namespace GuidaSharedCode {
 
         public Color color = Color.White;
 
+        public Color color2 = Color.White;
+
         public ParticleLayer drawLayer = ParticleLayer.AfterDust;
 
         public bool useLighting = false;
@@ -54,7 +56,7 @@ namespace GuidaSharedCode {
 
         public int owner = 255;
 
-        public int[] ai = new int[4];
+        public float[] ai = new float[4];
 
         public float[] localAI = new float[4];
 
@@ -71,6 +73,7 @@ namespace GuidaSharedCode {
         public Color lightColor = Color.White;
 
         public int state = 0;
+
         public bool cutOffscreen;
 
         public virtual Texture2D Texture => null;
@@ -236,7 +239,7 @@ namespace GuidaSharedCode {
         /// <summary>
         /// Maximum number of particles that can exist at once.
         /// </summary>
-        public int MaxParticles { get; set; } = 2000;
+        public int MaxParticles { get; set; } = 5000;
 
         /// <summary>
         /// Current total number of particles.
@@ -327,7 +330,6 @@ namespace GuidaSharedCode {
             particle.type = type;
             particle.alpha = alpha;
             particle.scale = scale;
-            MaxParticles = 4000;
             if (ParticleCount < MaxParticles) {
                 AddParticle(particle);
             }

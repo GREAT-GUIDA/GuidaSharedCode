@@ -22,12 +22,13 @@ namespace GuidaSharedCode {
         public BlendState trailBlendState = BlendState.AlphaBlend;
         public float trailAfterImage = 0;
         public Rectangle sourceRectangle;
-        public Color? color2;
+        new public Color? color2;
 
         public override void SetDefaults() {
             drawLayer = ParticleLayer.BeforeNPCs;
             base.SetDefaults();
             cutOffscreen = false;
+            
         }
         public override void AI() {
             if (trailPos.Length != trailLength) trailPos = new Vector2[trailLength];

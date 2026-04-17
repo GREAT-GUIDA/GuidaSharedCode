@@ -6,6 +6,7 @@ using ReLogic.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Terraria;
@@ -29,6 +30,7 @@ namespace GuidaSharedCode {
             }
             DynamicSpriteFontExtensionMethods.DrawString(sb, font, text, baseDrawPosition, main, 0f, default, scale, SpriteEffects.None, 0f);
         }
+
         public static float Smoothstep(float t1, float t2, float x) {
             x = MathHelper.Clamp((x - t1) / (t2 - t1), 0, 1);
             return x * x * (3 - 2 * x);
@@ -84,69 +86,131 @@ namespace GuidaSharedCode {
         }
     }
 
+    public static class HashUtils {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float fract(float x) => x - (float)Math.Floor(x);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Vector2 fract(Vector2 v) => new Vector2(fract(v.X), fract(v.Y));
 
-    public static class SpriteBatchUtils {
-        public static BlendState originalBlendState = Main.spriteBatch.GraphicsDevice.BlendState;
-        public static SamplerState originalSamplerState = Main.spriteBatch.GraphicsDevice.SamplerStates[0];
-        public static DepthStencilState originalDepthStencilState = Main.spriteBatch.GraphicsDevice.DepthStencilState;
-        public static RasterizerState originalRasterizerState = Main.spriteBatch.GraphicsDevice.RasterizerState;
-        public static void SaveGraphicsDeviceParameters(this SpriteBatch spriteBatch) {
-            originalBlendState = Main.spriteBatch.GraphicsDevice.BlendState;
-            originalSamplerState = Main.spriteBatch.GraphicsDevice.SamplerStates[0];
-            originalDepthStencilState = Main.spriteBatch.GraphicsDevice.DepthStencilState;
-            originalRasterizerState = Main.spriteBatch.GraphicsDevice.RasterizerState;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Vector3 fract(Vector3 v) => new Vector3(fract(v.X), fract(v.Y), fract(v.Z));
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Vector4 fract(Vector4 v) => new Vector4(fract(v.X), fract(v.Y), fract(v.Z), fract(v.W));
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float dot(Vector3 a, Vector3 b) => a.X * b.X + a.Y * b.Y + a.Z * b.Z;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float dot(Vector4 a, Vector4 b) => a.X * b.X + a.Y * b.Y + a.Z * b.Z + a.W * b.W;
+
+        // --- Hash º¯ÊýÊµÏÖ ---
+
+        public static float Hash11(float p) {
+            p = fract(p * .1031f);
+            p *= p + 33.33f;
+            p *= p + p;
+            return fract(p);
         }
-        public static void EndAndBeginShader(this SpriteBatch spriteBatch, Effect shader, BlendState bs = null) {
-            spriteBatch.End();
-            if (bs == null) {
-                bs = BlendState.NonPremultiplied;
+
+        public static float Hash12(Vector2 p) {
+            Vector3 p3 = fract(new Vector3(p.X, p.Y, p.X) * .1031f);
+            p3 += Vector3.One * dot(p3, new Vector3(p3.Y, p3.Z, p3.X) + Vector3.One * 33.33f);
+            return fract((p3.X + p3.Y) * p3.Z);
+        }
+
+        public static float Hash13(Vector3 p3) {
+            p3 = fract(p3 * .1031f);
+            p3 += Vector3.One * dot(p3, new Vector3(p3.Z, p3.Y, p3.X) + Vector3.One * 33.33f);
+            return fract((p3.X + p3.Y) * p3.Z);
+        }
+
+        public static Vector2 Hash21(float p) {
+            Vector3 p3 = fract(new Vector3(p) * new Vector3(.1031f, .1030f, .0973f));
+            p3 += Vector3.One * dot(p3, new Vector3(p3.Y, p3.Z, p3.X) + Vector3.One * 33.33f);
+            return fract(new Vector2(p3.X + p3.Y, p3.X + p3.Z) * new Vector2(p3.Z, p3.Y));
+        }
+
+        public static Vector2 Hash22(Vector2 p) {
+            Vector3 p3 = fract(new Vector3(p.X, p.Y, p.X) * new Vector3(.1031f, .1030f, .0973f));
+            p3 += Vector3.One * dot(p3, new Vector3(p3.Y, p3.Z, p3.X) + Vector3.One * 33.33f);
+            return fract(new Vector2(p3.X + p3.Y, p3.X + p3.Z) * new Vector2(p3.Z, p3.Y));
+        }
+
+        public static Vector3 Hash31(float p) {
+            Vector3 p3 = fract(new Vector3(p) * new Vector3(.1031f, .1030f, .0973f));
+            p3 += Vector3.One * dot(p3, new Vector3(p3.Y, p3.Z, p3.X) + Vector3.One * 33.33f);
+            return fract(new Vector3(p3.X + p3.Y, p3.X + p3.Z, p3.Y + p3.Z) * new Vector3(p3.Z, p3.Y, p3.X));
+        }
+
+        public static Vector3 Hash33(Vector3 p3) {
+            p3 = fract(p3 * new Vector3(.1031f, .1030f, .0973f));
+            p3 += Vector3.One * dot(p3, new Vector3(p3.Y, p3.X, p3.Z) + Vector3.One * 33.33f);
+            return fract(new Vector3(p3.X + p3.Y, p3.X + p3.X, p3.Y + p3.X) * new Vector3(p3.Z, p3.Y, p3.X));
+        }
+
+        public static Vector4 Hash44(Vector4 p4) {
+            p4 = fract(p4 * new Vector4(.1031f, .1030f, .0973f, .1099f));
+            float d = dot(p4, new Vector4(p4.W, p4.Z, p4.X, p4.Y) + Vector4.One * 33.33f);
+            p4 += new Vector4(d);
+            return fract(new Vector4(p4.X + p4.X, p4.X + p4.Y, p4.Y + p4.Z, p4.Z + p4.W)
+                         * new Vector4(p4.Z, p4.Y, p4.W, p4.X));
+        }
+    }
+    public static class NoiseUtils {
+        public static float GradientNoise(Vector2 p) {
+            Vector2 i = new Vector2((float)Math.Floor(p.X), (float)Math.Floor(p.Y));
+            Vector2 f = p - i;
+
+            Vector2 u = new Vector2(f.X * f.X * (3.0f - 2.0f * f.X), f.Y * f.Y * (3.0f - 2.0f * f.Y));
+
+            float a = Vector2.Dot(HashUtils.Hash22(i + new Vector2(0, 0)) * 2f - Vector2.One, f - new Vector2(0, 0));
+            float b = Vector2.Dot(HashUtils.Hash22(i + new Vector2(1, 0)) * 2f - Vector2.One, f - new Vector2(1, 0));
+            float c = Vector2.Dot(HashUtils.Hash22(i + new Vector2(0, 1)) * 2f - Vector2.One, f - new Vector2(0, 1));
+            float d = Vector2.Dot(HashUtils.Hash22(i + new Vector2(1, 1)) * 2f - Vector2.One, f - new Vector2(1, 1));
+
+            return MathHelper.Lerp(MathHelper.Lerp(a, b, u.X), MathHelper.Lerp(c, d, u.X), u.Y);
+        }
+
+        public static float SimplexNoise(Vector2 p) {
+            const float K1 = 0.366025404f;
+            const float K2 = 0.211324865f;
+
+            float s = (p.X + p.Y) * K1;
+            Vector2 i = new Vector2((float)Math.Floor(p.X + s), (float)Math.Floor(p.Y + s));
+
+            float t = (i.X + i.Y) * K2;
+            Vector2 a = p - (i - new Vector2(t));
+
+            Vector2 o = a.X > a.Y ? new Vector2(1, 0) : new Vector2(0, 1);
+            Vector2 b = a - o + new Vector2(K2);
+            Vector2 c = a - Vector2.One + new Vector2(2.0f * K2);
+
+            Vector3 h = new Vector3(
+                Math.Max(0.5f - Vector2.Dot(a, a), 0.0f),
+                Math.Max(0.5f - Vector2.Dot(b, b), 0.0f),
+                Math.Max(0.5f - Vector2.Dot(c, c), 0.0f)
+            );
+
+            Vector3 n = new Vector3(
+                h.X * h.X * h.X * h.X * Vector2.Dot(a, HashUtils.Hash22(i) * 2f - Vector2.One),
+                h.Y * h.Y * h.Y * h.Y * Vector2.Dot(b, HashUtils.Hash22(i + o) * 2f - Vector2.One),
+                h.Z * h.Z * h.Z * h.Z * Vector2.Dot(c, HashUtils.Hash22(i + Vector2.One) * 2f - Vector2.One)
+            );
+
+            return Vector3.Dot(n, new Vector3(70.0f));
+        }
+
+        public static float FBM(Vector2 uv, int octaves = 4) {
+            float f = 0.0f;
+            float amp = 0.5f;
+            for (int i = 0; i < octaves; i++) {
+                f += amp * SimplexNoise(uv);
+                uv *= 2.01f;
+                amp *= 0.5f;
             }
-            spriteBatch.Begin(default, bs, SamplerState.PointClamp, default, Main.Rasterizer, shader, Main.GameViewMatrix.TransformationMatrix);
-        }
-        public static void EndAndBeginShaderAdd(this SpriteBatch spriteBatch, Effect shader) {
-            spriteBatch.End();
-            spriteBatch.Begin(default, BlendState.Additive, SamplerState.PointClamp, default, Main.Rasterizer, shader, Main.GameViewMatrix.TransformationMatrix);
-        }
-        public static void EndAndBeginAlpha(this SpriteBatch spriteBatch) {
-            spriteBatch.End();
-            spriteBatch.Begin(default, BlendState.NonPremultiplied, SamplerState.PointClamp, default, Main.Rasterizer, null, Main.GameViewMatrix.TransformationMatrix);
-        }
-        public static void EndAndBeginAdd(this SpriteBatch spriteBatch) {
-            spriteBatch.End();
-            spriteBatch.Begin(default, BlendState.Additive, SamplerState.PointClamp, default, Main.Rasterizer, null, Main.GameViewMatrix.TransformationMatrix);
-        }
-        public static void EndAndBeginDefault(this SpriteBatch spriteBatch) {
-            spriteBatch.End();
-            spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone, null, Main.GameViewMatrix.TransformationMatrix);
-        }
-        public static void EndAndBeginBs(this SpriteBatch spriteBatch, BlendState bs) {
-            spriteBatch.End();
-            spriteBatch.Begin(default, bs, SamplerState.PointClamp, default, Main.Rasterizer, null, Main.GameViewMatrix.TransformationMatrix);
-        }
-        public static void EndAndBegin(this SpriteBatch spriteBatch, BlendState bs, SamplerState ss, Effect shader, Matrix mr) {
-            spriteBatch.End();
-            spriteBatch.Begin(default, bs, ss, default, Main.Rasterizer, shader, mr);
-        }
-        public static void EndAndBegin(this SpriteBatch spriteBatch, BlendState bs, SamplerState ss) {
-            spriteBatch.End();
-            spriteBatch.Begin(default, bs, ss, default, Main.Rasterizer, null, Main.GameViewMatrix.TransformationMatrix);
-        }
-        public static void EndAndBegin(this SpriteBatch spriteBatch, BlendState bs, SamplerState ss, Effect shader) {
-            spriteBatch.End();
-            spriteBatch.Begin(default, bs, ss, default, Main.Rasterizer, shader, Main.GameViewMatrix.TransformationMatrix);
-        }
-        public static void EndAndBegin(this SpriteBatch spriteBatch, BlendState bs, Effect shader) {
-            spriteBatch.End();
-            spriteBatch.Begin(default, bs, SamplerState.PointClamp, default, Main.Rasterizer, shader, Main.GameViewMatrix.TransformationMatrix);
-        }
-        public static void EndAndBegin(this SpriteBatch spriteBatch, SpriteSortMode ssm, BlendState bs) {
-            spriteBatch.End();
-            spriteBatch.Begin(ssm, bs, SamplerState.PointClamp, default, Main.Rasterizer, null, Main.GameViewMatrix.TransformationMatrix);
-        }
-        public static void EndAndBegin(this SpriteBatch spriteBatch, BlendState bs) {
-            spriteBatch.End();
-            spriteBatch.Begin(default, bs, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone, null, Main.GameViewMatrix.TransformationMatrix);
+            return f;
         }
     }
     public static class Easing {
@@ -276,36 +340,4 @@ namespace GuidaSharedCode {
         public static float Square(float t, float frequency = 1f, float dutyCycle = 0.5f) =>
             t * frequency % 1f < dutyCycle ? 1f : 0f;
     }
-
-
-    public struct VertexPositionColorTexture : IVertexType {
-        public Vector2 Position;
-        public Vector3 TexCoord;
-        public Color Color;
-        public VertexPositionColorTexture(Vector2 position, Vector3 texCoord, Color color) {
-            Position = position;
-            TexCoord = texCoord;
-            Color = color;
-        }
-        public VertexDeclaration VertexDeclaration => _vertexDeclaration;
-        private static readonly VertexDeclaration _vertexDeclaration = new VertexDeclaration(
-            new VertexElement(0, VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
-            new VertexElement(8, VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 0),
-            new VertexElement(20, VertexElementFormat.Color, VertexElementUsage.Color, 0)
-        );
-    }
-    public struct VertexPositionColor : IVertexType {
-        public Vector2 Position;
-        public Color Color;
-        public VertexPositionColor(Vector2 position, Color color) {
-            Position = position;
-            Color = color;
-        }
-        public VertexDeclaration VertexDeclaration => _vertexDeclaration;
-        private static readonly VertexDeclaration _vertexDeclaration = new VertexDeclaration(
-            new VertexElement(0, VertexElementFormat.Vector2, VertexElementUsage.Position, 0),
-            new VertexElement(8, VertexElementFormat.Color, VertexElementUsage.Color, 0)
-        );
-    }
-
 }
