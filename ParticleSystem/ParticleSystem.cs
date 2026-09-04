@@ -7,7 +7,6 @@ using System.Linq;
 using Terraria;
 using Terraria.ID;
 using Terraria.ModLoader;
-using XPT.Core.Audio.MP3Sharp.Decoding;
 
 namespace GuidaSharedCode {
     /// <summary>

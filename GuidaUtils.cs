@@ -74,6 +74,10 @@ namespace GuidaSharedCode {
             return new Vector2(x, y);
         }
 
+        public static Vector2 GetScreenCenter() {
+            return Main.screenPosition + new Vector2(Main.screenWidth, Main.screenHeight) * 0.5f;
+        }
+
         public static void NewScreenTarget() {
             GraphicsDevice device = Main.graphics.GraphicsDevice;
             int width = Main.screenTarget.Width;
@@ -105,7 +109,7 @@ namespace GuidaSharedCode {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static float dot(Vector4 a, Vector4 b) => a.X * b.X + a.Y * b.Y + a.Z * b.Z + a.W * b.W;
 
-        // --- Hash º¯ÊıÊµÏÖ ---
+        // --- Hash ÂºÂ¯ÃŠÃ½ÃŠÂµÃÃ– ---
 
         public static float Hash11(float p) {
             p = fract(p * .1031f);

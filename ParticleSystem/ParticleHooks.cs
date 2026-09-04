@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Terraria;
 using Terraria.ModLoader;
-using XPT.Core.Audio.MP3Sharp.Decoding;
 
 namespace GuidaSharedCode {
 
