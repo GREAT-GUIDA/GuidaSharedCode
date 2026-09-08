@@ -1,4 +1,4 @@
-﻿using GuidaSharedCode;
+using GuidaSharedCode;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using System;
@@ -47,9 +47,7 @@ namespace GuidaSharedCode {
             spriteBatch.EndAndBegin(trailBlendState);
             if (trailAfterImage > 0) {
                 spriteBatch.EndAndBegin(trailBlendState, SamplerState.LinearClamp, ModAsset.ShaAfterImage.Value);
-                ModAsset.ShaAfterImage.Value.Parameters["uIntensity"].SetValue(trailAfterImage);
-                ModAsset.ShaAfterImage.Value.Parameters["uColor"].SetValue(Color.White.ToVector3());
-                ModAsset.ShaAfterImage.Value.CurrentTechnique.Passes["P0"].Apply();
+                ModAsset.ShaAfterImage.Value.SetIntensity(trailAfterImage).SetColor(Color.White).Apply();
             }
             for (int i = trailEnd - 1; i >= trailStart; i--) {
                 if (trailPos[i] != Vector2.Zero) {

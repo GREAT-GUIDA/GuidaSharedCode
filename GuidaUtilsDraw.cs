@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
@@ -66,13 +66,162 @@ public static class SpriteBatchUtils {
         spriteBatch.End();
         spriteBatch.Begin(default, bs, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone, null, Main.GameViewMatrix.TransformationMatrix);
     }
+
+    public static void EndAndBeginImmediate(this SpriteBatch spriteBatch, BlendState bs) {
+        spriteBatch.End();
+        spriteBatch.Begin(
+            SpriteSortMode.Immediate,
+            bs,
+            SamplerState.LinearClamp,
+            DepthStencilState.None,
+            RasterizerState.CullNone,
+            null,
+            Main.GameViewMatrix.TransformationMatrix);
+    }
+
+    public static void EndAndBeginWorld(this SpriteBatch spriteBatch) {
+        spriteBatch.End();
+        spriteBatch.Begin(
+            SpriteSortMode.Deferred,
+            BlendState.AlphaBlend,
+            Main.DefaultSamplerState,
+            DepthStencilState.None,
+            Main.Rasterizer,
+            null,
+            Main.GameViewMatrix.TransformationMatrix);
+    }
+
+    public static void DrawCentered(this SpriteBatch spriteBatch, Texture2D texture, Vector2 position, Color color, float scale = 1f) {
+        spriteBatch.Draw(texture, position, null, color, 0f, texture.Size() * 0.5f, scale, SpriteEffects.None, 0f);
+    }
+
+    public static void DrawCentered(this SpriteBatch spriteBatch, Texture2D texture, Vector2 position, Color color, Vector2 scale) {
+        spriteBatch.Draw(texture, position, null, color, 0f, texture.Size() * 0.5f, scale, SpriteEffects.None, 0f);
+    }
+
+    public static void DrawCentered(this SpriteBatch spriteBatch, Texture2D texture, Vector2 position, Color color, float rotation, float scale) {
+        spriteBatch.Draw(texture, position, null, color, rotation, texture.Size() * 0.5f, scale, SpriteEffects.None, 0f);
+    }
+    public static void DrawWithEffect(
+        this SpriteBatch spriteBatch,
+        BlendState blendState,
+        Effect effect,
+        Matrix transform,
+        Action<Effect> draw) {
+        var device = spriteBatch.GraphicsDevice;
+        var originalBlendState = device.BlendState;
+        var originalSamplerState = device.SamplerStates[0];
+
+        spriteBatch.EndAndBegin(blendState, originalSamplerState, effect, transform);
+        draw(effect);
+        spriteBatch.EndAndBegin(originalBlendState, originalSamplerState, null, transform);
+    }
 }
 
 public static class ShaderUtils {
-    public static void Apply(this Effect shader, Action<Effect> setupParams = null) {
-        setupParams?.Invoke(shader);
-        shader.CurrentTechnique.Passes[0].Apply();
+    public static void Apply(this Effect effect) {
+        effect.CurrentTechnique.Passes[0].Apply();
     }
+
+    public static void Apply(this Effect effect, Action<Effect> setup) {
+        setup(effect);
+        effect.Apply();
+    }
+
+    public static Effect SetTime(this Effect effect, float value) {
+        effect.Parameters["uTime"].SetValue(value);
+        return effect;
+    }
+
+    public static Effect SetFrequency(this Effect effect, float value) {
+        effect.Parameters["uFrequency"].SetValue(value);
+        return effect;
+    }
+
+    public static Effect SetRotation(this Effect effect, float value) {
+        effect.Parameters["uRotation"].SetValue(value);
+        return effect;
+    }
+
+    public static Effect SetColor(this Effect effect, Color color) {
+        effect.Parameters["uColor"].SetValue(color.ToVector3());
+        return effect;
+    }
+
+    public static Effect SetColor(this Effect effect, Vector3 color) {
+        effect.Parameters["uColor"].SetValue(color);
+        return effect;
+    }
+
+    public static Effect SetOpacity(this Effect effect, float value) {
+        effect.Parameters["uOpacity"].SetValue(value);
+        return effect;
+    }
+
+    public static Effect SetWidth(this Effect effect, float value) {
+        effect.Parameters["uWidth"].SetValue(value);
+        return effect;
+    }
+
+    public static Effect SetIntensity(this Effect effect, float value) {
+        effect.Parameters["uIntensity"].SetValue(value);
+        return effect;
+    }
+
+    public static Effect SetProgress(this Effect effect, float value) {
+        effect.Parameters["uProgress"].SetValue(value);
+        return effect;
+    }
+
+    public static Effect SetSaturation(this Effect effect, float value) {
+        effect.Parameters["uSaturation"].SetValue(value);
+        return effect;
+    }
+
+    public static Effect SetImageSize0(this Effect effect, Vector2 value) {
+        effect.Parameters["uImageSize0"].SetValue(value);
+        return effect;
+    }
+
+    public static Effect SetImageSize0(this Effect effect, Texture2D texture) {
+        return effect.SetImageSize0(texture.Size());
+    }
+
+    public static Effect SetSourceRect(this Effect effect, Vector4 value) {
+        effect.Parameters["uSourceRect"].SetValue(value);
+        return effect;
+    }
+
+    public static Effect SetSourceRect(this Effect effect, Texture2D texture) {
+        return effect.SetSourceRect(new Vector4(0, 0, texture.Width, texture.Height));
+    }
+
+    public static Effect Set(this Effect effect, string name, float value) {
+        effect.Parameters[UniformName(name)].SetValue(value);
+        return effect;
+    }
+
+    public static Effect Set(this Effect effect, string name, Vector2 value) {
+        effect.Parameters[UniformName(name)].SetValue(value);
+        return effect;
+    }
+
+    public static Effect Set(this Effect effect, string name, Vector3 value) {
+        effect.Parameters[UniformName(name)].SetValue(value);
+        return effect;
+    }
+
+    public static Effect Set(this Effect effect, string name, Vector4 value) {
+        effect.Parameters[UniformName(name)].SetValue(value);
+        return effect;
+    }
+
+    public static Effect Set(this Effect effect, string name, Color value) {
+        return effect.Set(name, value.ToVector3());
+    }
+
+    static string UniformName(string name) =>
+        name.StartsWith("u", StringComparison.Ordinal) ? name : "u" + name;
 }
 public struct VertexPositionColorTexture : IVertexType {
     public Vector2 Position;
@@ -126,6 +275,55 @@ public static class ColorUtils {
         // 4. 转回 RGB 并保持原有的 Alpha
         Vector3 finalRgb = HslToRgb(hsl);
         return new Color(finalRgb.X, finalRgb.Y, finalRgb.Z) * (color.A / 255f);
+    }
+
+    public static Color ScaleSaturation(this Color color, float saturation) {
+        if (saturation == 1f)
+            return color;
+
+        Vector3 hsl = RgbToHsl(color.ToVector3());
+        hsl.Y = MathHelper.Clamp(hsl.Y * saturation, 0f, 1f);
+        Vector3 finalRgb = HslToRgb(hsl);
+        return new Color(finalRgb.X, finalRgb.Y, finalRgb.Z) * (color.A / 255f);
+    }
+
+    public static Color BoostLowSaturation(this Color color, float minSaturation, float threshold, float targetSaturation) {
+        if (threshold <= minSaturation)
+            return color;
+
+        Vector3 hsl = RgbToHsl(color.ToVector3());
+        if (hsl.Y <= minSaturation || hsl.Y >= threshold)
+            return color;
+
+        float t = 1f - (hsl.Y - minSaturation) / (threshold - minSaturation);
+        hsl.Y = MathHelper.Lerp(hsl.Y, targetSaturation, t);
+
+        Vector3 finalRgb = HslToRgb(hsl);
+        return new Color(finalRgb.X, finalRgb.Y, finalRgb.Z) * (color.A / 255f);
+    }
+
+    public static Color WithRgbScale(this Color color, float scale) {
+        if (scale == 1f)
+            return color;
+
+        byte alpha = color.A;
+        color *= scale;
+        color.A = alpha;
+        return color;
+    }
+
+    public static Color WithAlpha(this Color color, params float[] factors) {
+        float alpha = 1f;
+        for (int i = 0; i < factors.Length; i++)
+            alpha *= factors[i];
+
+        color.A = (byte)(255f * alpha);
+        return color;
+    }
+
+    public static Color MultiplyAlpha(this Color color, float factor) {
+        color.A = (byte)(color.A * factor);
+        return color;
     }
 
     // 辅助计算：RGB -> HSL
