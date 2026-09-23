@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -123,7 +123,7 @@ namespace GuidaSharedCode {
                     Vector2 origin = new Vector2(texture.Width, texture.Height) * 0.5f;
 
                     spriteBatch.Draw(texture, particle.position - Main.screenPosition, null,
-                        Color.White * opacity, 0f, origin, size, SpriteEffects.None, 0f);
+                        Color.White * opacity, 0f, origin, size);
                 }
             }
             spriteBatch.End();
