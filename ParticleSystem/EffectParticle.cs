@@ -381,4 +381,11 @@ namespace GuidaSharedCode {
         }
     }
 
+    public abstract class EffectParticle<TSelf> : EffectParticle
+        where TSelf : Particle, new() {
+        public new static TSelf Spawn(Vector2 position, Vector2 velocity = default,
+            int type = 0, float alpha = 1f, float scale = 1f) =>
+            Particle.Spawn<TSelf>(position, velocity, type, alpha, scale);
+    }
+
 }

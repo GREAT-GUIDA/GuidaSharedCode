@@ -5,7 +5,10 @@ using System;
 using Terraria;
 
 namespace GuidaSharedCode {
-    public class TrailParticle : Particle {
+    /// <summary>
+    /// 拖尾会在停止采样和刷新 timeLeft 后自行耗尽历史样本并消失；动作结束时不要手动 Kill 或清空拖尾。
+    /// </summary>
+    public class TrailParticle : Particle<TrailParticle> {
         public Vector2[] trailPos = new Vector2[1];
         public float[] trailRot = new float[1];
         /// <summary>每个采样点当时的水平翻转状态，由 spriteDirection 采样得到。</summary>
@@ -13,6 +16,8 @@ namespace GuidaSharedCode {
         public int trailLength = 50;
         public int trailStart;
         public int trailEnd;
+        /// <summary>相邻两帧采样之间额外绘制的残影数；0 为原始逐帧绘制。</summary>
+        public int trailInterpolation;
         public override Texture2D Texture => customizeTexture ?? ModAsset.TexEmpty.Value;
         public Texture2D customizeTexture;
         public BlendState trailBlendState = BlendState.AlphaBlend;
@@ -32,6 +37,8 @@ namespace GuidaSharedCode {
         public bool useTrailScale2;
         /// <summary>本帧已由外部 <see cref="PushTrailSample"/> 写入采样点时，<see cref="AI"/> 不再重复移位。</summary>
         public bool suppressAutoShift;
+        /// <summary>只接收宿主显式推送的采样；停止推送后让旧残影自然淡出，不要手动清理。</summary>
+        public bool externalSamplesOnly;
         /// <summary>为 true 时拖尾越旧（越靠后）绘制缩放越小。</summary>
         public bool taperTrailScale;
         /// <summary>宿主弹幕失效后不再采样，按剩余长度自然淡出。</summary>
@@ -64,7 +71,7 @@ namespace GuidaSharedCode {
 
         public override void AI() {
             EnsureTrailBuffers();
-            if (!suppressAutoShift) {
+            if (!suppressAutoShift && !externalSamplesOnly) {
                 PushTrailSample(position, rotation, spriteDirection == -1 ? SpriteEffects.FlipHorizontally : SpriteEffects.None);
             }
             suppressAutoShift = false;
@@ -78,31 +85,46 @@ namespace GuidaSharedCode {
         }
 
         public override bool PreDraw(SpriteBatch spriteBatch, Color lightColor) {
+            float endingFade = externalSamplesOnly
+                ? MathHelper.Clamp(timeLeft / (float)(trailLength + 1), 0f, 1f)
+                : 1f;
             spriteBatch.EndAndBegin(trailBlendState);
             if (trailAfterImage > 0) {
                 spriteBatch.EndAndBegin(trailBlendState, SamplerState.PointClamp, ModAsset.ShaAfterImage.Value);
                 ModAsset.ShaAfterImage.Value.SetIntensity(trailAfterImage).SetColor(Color.White).Apply();
             }
+            int inserted = Math.Max(0, trailInterpolation);
+            float sampleOpacity = 1f / (1f + inserted * 0.35f);
             for (int i = trailEnd - 1; i >= trailStart; i--) {
-                if (trailPos[i] != Vector2.Zero) {
-                    float progress = (float)(trailEnd - i) / trailEnd;
-                    var pos = trailPos[i];
-                    if (type == 1) {
-                        pos -= (i + (float)Math.Pow(i, 1.6f) * 0.1f + (float)Math.Sin(-Main.timeForVisualEffects * 0.12f + i * 0.2f) * 6f) * Vector2.UnitY;
-                    }
-                    Vector2 origin = useCustomTrailOrigin ? trailOrigin : sourceRectangle.Size() / 2f;
-                    Vector2 drawScale = useTrailScale2 ? trailScale2 : new Vector2(scale);
-                    if (taperTrailScale) {
-                        float sizeT = 0.1f + 0.9f * progress;
-                        drawScale *= sizeT;
-                    }
-                    spriteBatch.Draw(Texture, pos - Main.screenPosition, sourceRectangle,
-                        Color.Lerp(color, color2 ?? color, progress).MultiplyRGBA(lightColor) * (progress * alpha),
-                        trailRot[i], origin, drawScale, trailFlip[i], 0f);
+                if (trailPos[i] == Vector2.Zero) continue;
+                DrawTrailSample(spriteBatch, lightColor, i, trailPos[i], trailRot[i],
+                    trailFlip[i], endingFade * sampleOpacity);
+                if (i <= trailStart || trailPos[i - 1] == Vector2.Zero) continue;
+                for (int step = 1; step <= inserted; step++) {
+                    float t = step / (float)(inserted + 1);
+                    DrawTrailSample(spriteBatch, lightColor, i - t,
+                        Vector2.Lerp(trailPos[i], trailPos[i - 1], t),
+                        trailRot[i] + MathHelper.WrapAngle(trailRot[i - 1] - trailRot[i]) * t,
+                        t < 0.5f ? trailFlip[i] : trailFlip[i - 1],
+                        endingFade * sampleOpacity);
                 }
             }
             spriteBatch.EndAndBeginDefault();
             return false;
+        }
+
+        private void DrawTrailSample(SpriteBatch spriteBatch, Color lightColor, float index,
+            Vector2 pos, float rot, SpriteEffects flip, float opacity) {
+            float progress = (trailEnd - index) / trailEnd;
+            if (type == 1)
+                pos -= (index + (float)Math.Pow(index, 1.6f) * 0.1f +
+                    (float)Math.Sin(-Main.timeForVisualEffects * 0.12f + index * 0.2f) * 6f) * Vector2.UnitY;
+            Vector2 origin = useCustomTrailOrigin ? trailOrigin : sourceRectangle.Size() / 2f;
+            Vector2 drawScale = useTrailScale2 ? trailScale2 : new Vector2(scale);
+            if (taperTrailScale) drawScale *= 0.1f + 0.9f * progress;
+            spriteBatch.Draw(Texture, pos - Main.screenPosition, sourceRectangle,
+                Color.Lerp(color, color2 ?? color, progress).MultiplyRGBA(lightColor) *
+                (progress * alpha * opacity), rot, origin, drawScale, flip, 0f);
         }
 
         public void SetUp(int len, Texture2D tex, Rectangle rect, BlendState bs, float alp = 1, float scl = 1) {

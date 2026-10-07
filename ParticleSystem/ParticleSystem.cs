@@ -13,6 +13,11 @@ namespace GuidaSharedCode {
     /// Abstract base class for all particles in the system, following Terraria's Projectile pattern.
     /// </summary>
     public class Particle {
+        public static T Spawn<T>(Vector2 position, Vector2 velocity = default,
+            int type = 0, float alpha = 1f, float scale = 1f)
+            where T : Particle, new() =>
+            ParticleManager.Instance.NewParticle<T>(position, velocity, type, alpha, scale);
+
         public Vector2 position;
 
         public Vector2 velocity;
@@ -54,6 +59,34 @@ namespace GuidaSharedCode {
         public int type;
 
         public int owner = 255;
+
+        // The entity currently driving this particle's pose. Keep this separate
+        // from owner, which is the Terraria-style player owner index.
+        public Entity Holder { get; private set; }
+        private int holderType = -1;
+
+        public void SetHolder(Entity entity) {
+            Holder = entity;
+            holderType = entity switch {
+                NPC npc => npc.type,
+                Projectile projectile => projectile.type,
+                _ => -1
+            };
+        }
+
+        public bool HasValidHolder() => Holder switch {
+            NPC npc => npc.whoAmI >= 0 && npc.whoAmI < Main.maxNPCs &&
+                ReferenceEquals(Main.npc[npc.whoAmI], npc) && npc.active &&
+                npc.life > 0 && npc.type == holderType,
+            Player player => player.whoAmI >= 0 && player.whoAmI < Main.maxPlayers &&
+                ReferenceEquals(Main.player[player.whoAmI], player) &&
+                player.active && !player.dead,
+            Projectile projectile => projectile.whoAmI >= 0 &&
+                projectile.whoAmI < Main.maxProjectiles &&
+                ReferenceEquals(Main.projectile[projectile.whoAmI], projectile) &&
+                projectile.active && projectile.type == holderType,
+            _ => false
+        };
 
         public float[] ai = new float[4];
 
@@ -221,6 +254,14 @@ namespace GuidaSharedCode {
     }
 
     
+    // Lets a concrete particle use Type.Spawn(...) with its own return type.
+    // A child with extra spawn arguments hides this static method with `new`.
+    public abstract class Particle<TSelf> : Particle where TSelf : Particle, new() {
+        public new static TSelf Spawn(Vector2 position, Vector2 velocity = default,
+            int type = 0, float alpha = 1f, float scale = 1f) =>
+            Particle.Spawn<TSelf>(position, velocity, type, alpha, scale);
+    }
+
     /// <summary>
     /// Manages all particles in the system, handling updates and rendering across different layers.
     /// </summary>

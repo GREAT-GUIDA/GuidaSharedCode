@@ -14,7 +14,7 @@ namespace GuidaSharedCode {
         Tile
     }
 
-    public class ScreenMaskParticle : Particle {
+    public class ScreenMaskParticle : Particle<ScreenMaskParticle> {
         public Texture2D customTexture;
 
         public ScreenMaskMode renderMode = ScreenMaskMode.Stretch;
@@ -25,6 +25,7 @@ namespace GuidaSharedCode {
 
         public float tileScale = 1f;
         public bool nonPremultiplied = false;
+        public int fadeOutTicks;
 
         public override Texture2D Texture => customTexture ?? TextureAssets.MagicPixel.Value;
 
@@ -41,6 +42,7 @@ namespace GuidaSharedCode {
             height = 1;
             scale = 1f;
             renderMode = ScreenMaskMode.Stretch;
+            fadeOutTicks = 0;
             color = new Color(255, 255, 255, 255);
         }
         public void SetTexture(Texture2D texture, ScreenMaskMode mode = ScreenMaskMode.Stretch, Rectangle? sourceRect = null) {
@@ -56,8 +58,11 @@ namespace GuidaSharedCode {
         public override void Draw(SpriteBatch spriteBatch, Color lightColor) {
             if (Texture == null) return;
 
-            Color finalColor = color * alpha;
-            if(nonPremultiplied) spriteBatch.EndAndBeginAlpha();
+            float fade = fadeOutTicks > 0
+                ? MathHelper.Clamp(timeLeft / (float)fadeOutTicks, 0f, 1f) : 1f;
+            Color finalColor = color * (alpha * fade);
+            spriteBatch.EndAndBegin(nonPremultiplied ? BlendState.NonPremultiplied : BlendState.AlphaBlend,
+                SamplerState.PointClamp, null, Matrix.Identity);
             switch (renderMode) {
                 case ScreenMaskMode.Stretch:
                     DrawStretched(spriteBatch, finalColor);

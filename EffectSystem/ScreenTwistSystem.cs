@@ -33,6 +33,7 @@ namespace GuidaSharedCode {
         public override void Load() {
             if (Main.dedServ) return;
 
+            DrawHooks.Hook(ParticleLayer.BeforeNPCs, DrawBackgroundTwist);
             On_Main.InitTargets_int_int += On_Main_InitTargets_int_int;
             Main.OnResolutionChanged += RecreateRenderTargets;
 
@@ -41,6 +42,32 @@ namespace GuidaSharedCode {
             if (detourMethod != null) {
                 MonoModHooks.Add(detourMethod, On_Main_EndCapture);
             }
+        }
+
+        public override void Unload() {
+            if (!Main.dedServ) {
+                DrawHooks.UnHook(ParticleLayer.BeforeNPCs, DrawBackgroundTwist);
+                On_Main.InitTargets_int_int -= On_Main_InitTargets_int_int;
+                Main.OnResolutionChanged -= RecreateRenderTargets;
+            }
+            twistTarget = null;
+            twistTarget2 = null;
+        }
+
+        private static void DrawBackgroundTwist(ParticleLayer layer) {
+            if (CaptureManager.Instance.IsCapturing || !HasActiveTwistParticles(true)) return;
+
+            GraphicsDevice device = Main.graphics.GraphicsDevice;
+            RenderTargetBinding[] bindings = device.GetRenderTargets();
+            if (bindings.Length != 1 || bindings[0].RenderTarget is not RenderTarget2D sceneTarget ||
+                sceneTarget.RenderTargetUsage != RenderTargetUsage.PreserveContents) return;
+
+            Main.spriteBatch.End();
+            DrawTwist(true, sceneTarget);
+            Main.spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend,
+                Main.DefaultSamplerState, DepthStencilState.None,
+                RasterizerState.CullCounterClockwise, null,
+                Main.GameViewMatrix.TransformationMatrix);
         }
 
         private void On_Main_InitTargets_int_int(On_Main.orig_InitTargets_int_int orig, Main self, int width, int height) {
@@ -93,7 +120,7 @@ namespace GuidaSharedCode {
             if (HasActivePostEffects())
                 return true;
 
-            return HasActiveTwistParticles();
+            return HasActiveTwistParticles(false);
         }
 
         private static bool HasActivePostEffects() =>
@@ -101,18 +128,14 @@ namespace GuidaSharedCode {
             || ULerpIntensity > EffectIntensityEpsilon
             || URadialBlurIntensity > EffectIntensityEpsilon;
 
-        private static bool HasActiveTwistParticles() {
-            if (ParticleManager.Instance?.particlesByLayer == null)
-                return false;
-
-            if (!ParticleManager.Instance.particlesByLayer.TryGetValue(ParticleLayer.Twist, out List<Particle> particles)
-                || particles == null
-                || particles.Count == 0) {
-                return false;
-            }
+        private static bool HasActiveTwistParticles(bool behindNPCs) {
+            if (ParticleManager.Instance?.particlesByLayer == null ||
+                !ParticleManager.Instance.particlesByLayer.TryGetValue(ParticleLayer.Twist,
+                    out List<Particle> particles)) return false;
 
             for (int i = 0; i < particles.Count; i++) {
-                if (particles[i] is TwistCircleParticle twist && twist.image_alpha > EffectIntensityEpsilon)
+                if (particles[i].IsAlive && particles[i] is ITwistParticle twist &&
+                    twist.DrawBehindNPCs == behindNPCs && twist.TwistOpacity > EffectIntensityEpsilon)
                     return true;
             }
 
@@ -126,10 +149,17 @@ namespace GuidaSharedCode {
             if (Main.screenTarget.RenderTargetUsage != RenderTargetUsage.PreserveContents)
                 GuidaUtils.NewScreenTarget();
 
+            DrawTwist(false, Main.screenTarget);
+        }
+
+        private static void DrawTwist(bool behindNPCs, RenderTarget2D sceneTarget) {
             SpriteBatch spriteBatch = Main.spriteBatch;
             GraphicsDevice device = Main.graphics.GraphicsDevice;
-            int width = Main.screenTarget.Width;
-            int height = Main.screenTarget.Height;
+            int width = sceneTarget.Width;
+            int height = sceneTarget.Height;
+
+            if (twistTarget == null || twistTarget2 == null ||
+                twistTarget.Width != width || twistTarget.Height != height) return;
 
             device.SetRenderTarget(twistTarget);
             device.Clear(Color.Transparent);
@@ -149,45 +179,43 @@ namespace GuidaSharedCode {
 
             ModAsset.ShaTwistImage.Value.CurrentTechnique.Passes["P0"].Apply();
 
-            if (ParticleManager.Instance.particlesByLayer.TryGetValue(ParticleLayer.Twist, out List<Particle> particles)) {
-                Texture2D texture = ModAsset.TexTwistCircle.Value;
-                Vector2 origin = new Vector2(texture.Width, texture.Height) * 0.5f;
-
+            if (ParticleManager.Instance?.particlesByLayer?.TryGetValue(ParticleLayer.Twist,
+                    out List<Particle> particles) == true) {
                 for (int i = 0; i < particles.Count; i++) {
                     Particle particle = particles[i];
-                    if (particle is not TwistCircleParticle twistCircle || twistCircle.image_alpha <= EffectIntensityEpsilon)
+                    if (!particle.IsAlive || particle is not ITwistParticle twist ||
+                        twist.DrawBehindNPCs != behindNPCs || twist.TwistOpacity <= EffectIntensityEpsilon)
                         continue;
-
-                    float size = twistCircle.image_scale;
-                    float opacity = twistCircle.image_alpha * 0.5f;
-
-                    spriteBatch.Draw(texture, particle.position - Main.screenPosition, null,
-                        Color.White * opacity, 0f, origin, size);
+                    twist.DrawTwist(spriteBatch);
                 }
             }
             spriteBatch.End();
 
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied,
-                SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone,
-                ModAsset.ShaPostScreenEffects.Value, Matrix.Identity);
-
             Vector2 screenSize = new Vector2(
                 device.PresentationParameters.BackBufferWidth,
                 device.PresentationParameters.BackBufferHeight);
+            if (behindNPCs) {
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.Opaque,
+                    SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone,
+                    null, Matrix.Identity);
+            } else {
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied,
+                    SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone,
+                    ModAsset.ShaPostScreenEffects.Value, Matrix.Identity);
 
-            ModAsset.ShaPostScreenEffects.Value.Parameters["uImageSize1"].SetValue(screenSize);
-            ModAsset.ShaPostScreenEffects.Value.Parameters["uBloomIntensity"].SetValue(UBloomIntensity);
-            ModAsset.ShaPostScreenEffects.Value.Parameters["uLerpIntensity"].SetValue(ULerpIntensity);
-            ModAsset.ShaPostScreenEffects.Value.Parameters["uLerpColor"].SetValue(ULerpColor.ToVector3());
-            ModAsset.ShaPostScreenEffects.Value.Parameters["uRadialBlurIntensity"].SetValue(URadialBlurIntensity);
-            ModAsset.ShaPostScreenEffects.Value.Parameters["uRadialBlurPosition"].SetValue(URadialBlurPosition);
-            ModAsset.ShaPostScreenEffects.Value.CurrentTechnique.Passes["P0"].Apply();
-
+                ModAsset.ShaPostScreenEffects.Value.Parameters["uImageSize1"].SetValue(screenSize);
+                ModAsset.ShaPostScreenEffects.Value.Parameters["uBloomIntensity"].SetValue(UBloomIntensity);
+                ModAsset.ShaPostScreenEffects.Value.Parameters["uLerpIntensity"].SetValue(ULerpIntensity);
+                ModAsset.ShaPostScreenEffects.Value.Parameters["uLerpColor"].SetValue(ULerpColor.ToVector3());
+                ModAsset.ShaPostScreenEffects.Value.Parameters["uRadialBlurIntensity"].SetValue(URadialBlurIntensity);
+                ModAsset.ShaPostScreenEffects.Value.Parameters["uRadialBlurPosition"].SetValue(URadialBlurPosition);
+                ModAsset.ShaPostScreenEffects.Value.CurrentTechnique.Passes["P0"].Apply();
+            }
             device.SetRenderTargets(twistTarget2);
-            spriteBatch.Draw(Main.screenTarget, Vector2.Zero, Color.White);
+            spriteBatch.Draw(sceneTarget, Vector2.Zero, Color.White);
             spriteBatch.End();
 
-            device.SetRenderTargets(Main.screenTarget);
+            device.SetRenderTargets(sceneTarget);
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied,
                 SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone,
